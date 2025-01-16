@@ -3,9 +3,11 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
+import logging
 
+logger = logging.getLogger(__name__)
 
-def send_ticket_report(processed_files, errors):
+def send_ticket_report(corpus):
 
     try:
         message = MIMEMultipart()
@@ -13,23 +15,7 @@ def send_ticket_report(processed_files, errors):
 
         message['To'] = os.environ.get("receiver_email_address")
         message['Subject'] = "NoReply: Daily Report on Lidal Data Injection"
-        
-        status_file = ""
-        if processed_files:
-            
-            for file_info in processed_files:
-                status_file += 'success' if file_info.get('success', False) else 'warning'
-
-        else:
-            status_file += "No files were processed"
-        status_error = ""
-        if errors:      
-            for error in errors:
-                status_error += f"{error}"
-        else:
-            status_error += "No errors encountered during processing"
-        body = status_file + "/n" + status_error
-        message.attach(MIMEText(body, 'plain'))
+        message.attach(MIMEText(corpus, 'plain'))
         
 
         with smtplib.SMTP(os.environ.get("smtp_server"), int(os.environ.get("port"))) as server:
@@ -39,5 +25,4 @@ def send_ticket_report(processed_files, errors):
             
         return True
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
         return False
