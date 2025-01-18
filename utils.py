@@ -31,7 +31,8 @@ def get_environmental_variable(file_path):
             os.environ["sender_email_address"] = js["sender_email_address"]
             os.environ["port"] = js["port"]
             os.environ["password"] = js["password"]
-            os.environ["receiver_email_address"] = js["receiver_email_address"][0]
+            os.environ["receiver_email_address_1"] = js["receiver_email_address"][0]
+            os.environ["receiver_email_address_2"] = js["receiver_email_address"][1]
 
             return 
         except Exception as e:
