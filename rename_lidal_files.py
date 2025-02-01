@@ -17,6 +17,6 @@ def rename_files(file):
             logger.error(f"Error occurred calling {exe_path}, code {result.stderr}")
         return result.stdout.splitlines()[-2]    
     except Exception as e:
-            logger.error(f"Error in rename_files: {e}")  
+            logger.error(f"Error occurred while renaming files: {e}")  
 
    
