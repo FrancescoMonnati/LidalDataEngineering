@@ -53,21 +53,21 @@ class Monitoring_Lidal_Files:
                 
             return {}
         except Exception as e:
-            self.logger.error(f"Error loading management file: {e}")
+            self.logger.error(f"Error occurred while loading management file: {e}")
             return {}
     
     def save_management_file(self, updated_management_file):
         try:
             utils.dump_json_file(updated_management_file,self.management_file_path )
         except Exception as e:
-            self.logger.error(f"Error saving management file: {e}")
+            self.logger.error(f"Error occurred while saving management file: {e}")
     
     def get_current_files(self):
 
         try:
             return {f.name for f in self.folder_path.iterdir() if f.is_file() and not f.name.endswith(('.rpsm',".filepart",".txt",".gz")) and 'doy' in f.name.lower() and (self.folder_path / f"{f.stem}.rpsm").exists()}
         except Exception as e:
-            self.logger.error(f"Error reading folder contents: {e}")
+            self.logger.error(f"Error occured while reading folder contents: {e}")
             return set()
     
     def check_for_new_files(self):
@@ -130,7 +130,7 @@ class Monitoring_Lidal_Files:
                             self.logger.info(f"{new_file_name} already exists. Keeping the larger file.{file} is not moved and renamed")
                  
                   except Exception as e:
-                    self.logger.error(f"Error occurred in moving and renaming {file}: {e}")
+                    self.logger.error(f"Error occurred while moving and renaming {file}: {e}")
                              
              return new_files_renamed_list,list(set(year_list))       
 
@@ -170,16 +170,24 @@ class Monitoring_Lidal_Files:
         else:
             return []          
 
-    def temporary_db(self,new_files):
-        if new_files != []:   
-            try:
+    def temporary_db_list(self,new_files):
+
+        try:
+            if new_files != []: 
+                    
                     self.temporary_db_files.extend(new_files)
                     self.management_files["temporary_db"] = list(set(self.temporary_db_files))
                     self.save_management_file(self.management_files)
                     self.logger.info(f"Updated temporary db list")
                     
-            except Exception as e:
-                    self.logger.error(f"Error occurred while updating temporary db list")        
+            else:
+                self.management_files["temporary_db"] = new_files
+                self.save_management_file(self.management_files)
+                self.logger.info(f"Removed files on temporary db list")
+
+        except Exception as e:
+                    self.logger.error(f"Error occurred while updating temporary db list")  
+                                
 
 
 def main():
@@ -205,7 +213,7 @@ def main():
     
         
     except Exception as e:
-        logging.error(f"Error in main execution: {e}")
+        logging.error(f"Error in monitoring execution: {e}")
 
 if __name__ == "__main__":
     main()
