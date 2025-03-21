@@ -3,9 +3,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import os
-import logging
 
-logger = logging.getLogger(__name__)
 
 def send_ticket_report(corpus):
 

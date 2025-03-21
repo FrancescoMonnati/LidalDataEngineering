@@ -20,10 +20,10 @@ class Monitoring_Lidal_Files:
         self.management_file_path = Path(management_file)
         self.current_date = datetime.now()
         self.month_name = self.current_date.strftime("%B")
+        self.management_files = self.load_management_file()
+        self.temporary_db_files = self.management_files["temporary_db"]
 
-
-        
-        self.month_dir = os.path.dirname(os.getcwd()) + '/LogFiles/' + self.month_name
+        self.month_dir = os.path.dirname(os.getcwd()) + '/LogFiles/' + str(datetime.now().year) + "/" + self.month_name
         Path(self.month_dir).mkdir(parents=True, exist_ok=True)
         logging.basicConfig(
             level=logging.INFO,
@@ -72,11 +72,9 @@ class Monitoring_Lidal_Files:
     
     def check_for_new_files(self):
 
- 
-        self.management_files = self.load_management_file()
         history_files = self.management_files["history"]
         current_files = self.get_current_files()
-        self.temporary_db_files = self.management_files["temporary_db"]
+
         new_files = [f for f in list(current_files) if f not in list(set(history_files))]
         #new_files = current_files - set(history_files)
         if new_files != []:
@@ -95,8 +93,6 @@ class Monitoring_Lidal_Files:
    
              return [],[]       
         
-        
-
     def process_new_files(self, new_files):
              
              year_list = []
@@ -170,20 +166,22 @@ class Monitoring_Lidal_Files:
         else:
             return []          
 
-    def temporary_db_list(self,new_files):
+    def temporary_db_list(self,new_files, remove = False):
 
         try:
             if new_files != []: 
-                    
+                if remove == False:    
                     self.temporary_db_files.extend(new_files)
                     self.management_files["temporary_db"] = list(set(self.temporary_db_files))
                     self.save_management_file(self.management_files)
                     self.logger.info(f"Updated temporary db list")
                     
-            else:
-                self.management_files["temporary_db"] = new_files
-                self.save_management_file(self.management_files)
-                self.logger.info(f"Removed files on temporary db list")
+                else:
+                    self.management_files = self.load_management_file()
+                    self.temporary_db_files = self.management_files["temporary_db"]
+                    self.management_files["temporary_db"] = list(filter(lambda x: x not in new_files, self.temporary_db_files))
+                    self.save_management_file(self.management_files)
+                    self.logger.info(f"Removed {new_files} on temporary db list")
 
         except Exception as e:
                     self.logger.error(f"Error occurred while updating temporary db list")  
@@ -197,7 +195,7 @@ def main():
         monitor = Monitoring_Lidal_Files("L:/Lidal complete", path + "/ManagementFiles/Management_Files.json","L:/Lidal TorV temp")
         new_files,year_list = monitor.check_for_new_files()
         new_files = monitor.clean_files(new_files,year_list)
-        monitor.temporary_db(new_files)
+        monitor.temporary_db_list(new_files)
         env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
         
         filtered_logs = monitor.extract_logs()
