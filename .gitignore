@@ -7,7 +7,7 @@ LidalSessionAnalysis32Edge.exe
 @IGRF
 @OEIS
 @WGS84
-Lidal Client
+LidalClient
 compute_B_core.m
 compute_B_crust.m
 compute_B_ext.m
