@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 def creating_temporary_db(directory, txt_file, log_file):
     try:
-        exe_path = r'C:\LidalClient\LidalSessionAnalysis32Edge.exe'
-  
+        exe_path = r'D:/Utenti/difin/LidalDataEngineering/Code/LidalClient/LidalSessionAnalysis.exe'
+      
         
         with open(os.path.join(directory, log_file), 'w') as log:
 

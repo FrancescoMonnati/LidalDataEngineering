@@ -1,11 +1,13 @@
 import subprocess
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 def rename_files(file):
     try:
-        exe_path  = r"./RenameLidalFiles.exe"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        exe_path = os.path.join(script_dir, "RenameLidalFiles.exe")
         command = [exe_path]  
         
         command.extend([file])  

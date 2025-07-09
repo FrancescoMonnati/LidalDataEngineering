@@ -2,3 +2,27 @@ Environmental_Variables.json
 Management_Files.json
 RenameLidalFiles.exe
 LidalSessionAnalysis32Edge.exe
+.venv
+@CHAOS
+@IGRF
+@OEIS
+@WGS84
+Lidal Client
+compute_B_core.m
+compute_B_crust.m
+compute_B_ext.m
+compute_geoid_altitude.m
+compute_mcilwain_l.m
+design_SHA.m
+design_SHA_gsm.m
+design_SHA_sm.m
+geo2sm.m
+mat_mul_mat.m
+newgetOrbit2.m
+sunGEI.m
+synth_values.m
+synth_values_CHAOS_ext.m
+provadatabase.py
+prova.py
+prova_clearing_temprary_dblist.py
+dumping_data_orbit_sampling_per_day.py

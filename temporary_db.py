@@ -62,7 +62,7 @@ class TemporaryDB(Monitoring_Lidal_Files):
                         self.logger.info(f"Creating temporary db")
                         creating_temporary_db.creating_temporary_db(self.target_folder,"file_list.txt","temporary_db.log")
                         self.logger.info(f"Temporary db created")
-                        #self.temporary_db_list(v, remove = True)
+                    self.temporary_db_list([], remove = True)
           
             except Exception as e:
                     self.logger.error(f"Error in temporary db execution: {e}")
@@ -80,10 +80,10 @@ class TemporaryDB(Monitoring_Lidal_Files):
 
 
 def main():
-    path = os.path.dirname(os.getcwd())
+    path = os.path.dirname(os.getcwd()) + "/difin/LidalDataEngineering"
     try:
         
-        temporary_db = TemporaryDB("L:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","E:/Inserimenti TMP")
+        temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
         #temporary_db.clean_directories()
         temporary_db.temporary_sql()
         env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")

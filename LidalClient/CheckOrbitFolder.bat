@@ -1,0 +1,3 @@
+@ECHO OFF
+FOR /R %%F IN (ISS_ATT_QUAT_LVLH*.*) DO CheckOrbit %%F
+FOR /R %%F IN (ISS_STATE_VECT_01_CTRS*.*) DO CheckOrbit %%F

@@ -1,0 +1,1 @@
+FOR %%F IN (L*.*) DO RenameLidalFiles %%F

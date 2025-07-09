@@ -19,7 +19,7 @@ def send_ticket_report(corpus):
 
         with smtplib.SMTP(os.environ.get("smtp_server"), int(os.environ.get("port"))) as server:
             server.starttls()
-            server.login(os.environ.get("sender_email_address"), os.environ.get("password"))
+            server.login(os.environ.get("sender_email_address"), os.environ.get("password_email"))
             for recipient in recipients:
                 server.sendmail(os.environ.get("sender_email_address"), recipient, message.as_string())
         return True
