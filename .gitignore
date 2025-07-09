@@ -8,6 +8,8 @@ LidalSessionAnalysis32Edge.exe
 @OEIS
 @WGS84
 LidalClient
+LidalClient/DOYClock.exe
+LidalClient/DOYClock/OSX/DOYClock
 compute_B_core.m
 compute_B_crust.m
 compute_B_ext.m
