@@ -101,7 +101,7 @@ def extract_doy(filename):
 
 def doy_to_datetime(year, doy, hour, minute, second):
         return datetime(year, 1, 1) + timedelta(days=doy - 1, hours=hour, minutes=minute, seconds=second)
-
+        
 def datetime_to_doy(dt):
     return dt.timetuple().tm_yday
 
@@ -112,7 +112,7 @@ def utc_to_ccsds(utc):
      return utc - 315964800
 
 def ccsds_to_datetime(ccsds):
-     return datetime.fromtimestamp(ccsds + 315964800)
+     return datetime.utcfromtimestamp(ccsds + 315964800)
 
 def ccsds_to_doy(ccsds):
     dt = ccsds_to_datetime(ccsds)

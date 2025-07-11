@@ -5,7 +5,7 @@ import shutil
 import zipfile
 from bs4 import BeautifulSoup
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import urljoin
 import utils
@@ -56,7 +56,7 @@ def find_download_link(html_content,chaos_url):
             return full_url
     return None
 
-def download_and_extract_zip(download_url,destination_folder):
+def download_and_extract_zip(download_url,destination_folder, release):
     try:
         response = requests.get(download_url, stream=True)
         response.raise_for_status()  
@@ -68,7 +68,7 @@ def download_and_extract_zip(download_url,destination_folder):
             shutil.copyfileobj(response.raw, f)
         logger.info(f"ZIP file dowloaded: {zip_filepath}")
 
-        extract_folder = os.path.join(destination_folder, "CHAOS_extracted")
+        extract_folder = os.path.join(destination_folder, release)
         if os.path.exists(extract_folder):
             shutil.rmtree(extract_folder)  
             
@@ -76,21 +76,20 @@ def download_and_extract_zip(download_url,destination_folder):
             zip_ref.extractall(extract_folder)
         logger.info(f"ZIP file extracted in: {extract_folder}")
 
-        for item in os.listdir(extract_folder):
-            src_path = os.path.join(extract_folder, item)
-            dest_path = os.path.join(destination_folder, item)
+        # for item in os.listdir(extract_folder):
+        #     src_path = os.path.join(extract_folder, item)
+        #     dest_path = os.path.join(destination_folder, item)
             
-            if os.path.exists(dest_path):
-                if os.path.isdir(dest_path):
-                    shutil.rmtree(dest_path)
-                else:
-                    os.remove(dest_path)
+        #     if os.path.exists(dest_path):
+        #         if os.path.isdir(dest_path):
+        #             shutil.rmtree(dest_path)
+        #         else:
+        #             os.remove(dest_path)
             
-            shutil.move(src_path, destination_folder)
-        logger.info(f"ZIP file moved in: {destination_folder}")
+        #     shutil.move(src_path, destination_folder)
+        # logger.info(f"ZIP file moved in: {destination_folder}")
         
         os.remove(zip_filepath)
-        shutil.rmtree(extract_folder)
         
         return True
     except requests.RequestException as e:
@@ -118,12 +117,24 @@ def main():
 
                 download_url = find_download_link(html_content,chaos_url)
                 if download_url:
-                    success = download_and_extract_zip(download_url,destination_folder)
+                    success = download_and_extract_zip(download_url,destination_folder,release)
                     if success:
+                        date_datetime = datetime.strptime(date, "%B %d, %Y")                      
+                        date_str = date_datetime.strftime('%Y/%m/%d')
+                        current_date_datetime = datetime.strptime(current_date, "%B %d, %Y")
+                        current_date_str = current_date_datetime.strftime('%Y/%m/%d')
+                        following_day = current_date_datetime + timedelta(days=1)
                         js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
                         js["chaos_current_info"]["Date"] = date
-                        js["chaos_current_info"]["Release"] = release
-                        utils.dump_json_file(js,path + "/Code/Environmental_Variables.json")
+                        js["chaos_current_info"]["Release"] = release                                                   
+                        new_release_dict = {
+                            "Release": release,
+                            "Starting_date": following_day.strftime('%Y/%m/%d'),
+                            "Ending_date": date_str
+                                            }
+                        js["chaos_model_version_and_validation_date_range"].append(new_release_dict)
+                        utils.dump_json_file(js, path + "/Code/Environmental_Variables.json")
+
             else:
                 logging.info(f"CHAOS model version has not be updated: date and release on site {date},{release}; date and release already downloaded:{current_date},{current_release}")            
         else:

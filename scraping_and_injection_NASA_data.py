@@ -212,14 +212,15 @@ def moving_files(source_folder,destination_folder):
             if dumped_files:
                 for file in dest_path.iterdir():
                     if file.is_file():
-                    
-                        year = file.split("_")[0]
-                        if len(year.split("_")[0]) == 4 and year.split("_")[0].isdigit():
+                       
+                       year = file.name.split("_")[0]
+                       if len(year) == 4 and year.isdigit(): 
                             year_source_dir = os.path.join(source_folder, year)
-                            shutil.move(str(file), str(year_source_dir / file.name))
+                            os.makedirs(year_source_dir, exist_ok=True)  #
+                            shutil.move(str(file), os.path.join(year_source_dir, file.name))
                             logger.info(f"File {file} moved to {year_source_dir}")
         except Exception as e:
-            logger.error(f"Error occured while moving file NASA from {destination_folder} to {source_folder}")                    
+            logger.error(f"Error occured while moving file NASA from {destination_folder} to {source_folder}")               
                  
 
 
@@ -250,18 +251,14 @@ def main():
                injection = connection_and_queries_to_db.NASA_data_injection(server,database, username, password,table_name,table_temp,ccsds_start)
                if injection:
                     connection_and_queries_to_db.delete_records_from_table(server,database, username, password, table_temp)
+                    moving_files(source_folder,destination_folder)
+
        else:
            logger.error("Error occurred while exctracting NASA zip file extracted")
            
     else:
        logger.error("NASA file download process failed")
     
-    
-    
-    
-        
-
-
 
 if __name__ == "__main__":
     main()

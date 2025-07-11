@@ -16,6 +16,8 @@ import logging
 import re
 from mlp import MLP
 from dateutil.parser import parse
+import connection_and_queries_to_db
+import torch
 
 logger = utils.setup_logging()
 
@@ -88,16 +90,12 @@ def check_and_copy_new_folders(source_path, destination_path, declared_year=Fals
         
         return all_copied_folders if all_copied_folders else False
 
-def process_directory(directory, matlab_queue, year,d0, chaos = True):
-
+def process_directory(directory, matlab_queue, year,d0,server,database, username,password,table,release, chaos = True, prediction_df = None):
 
     dir_name = os.path.basename(directory)
     day = int(dir_name.split("_")[0])
     eng = matlab_queue.get()
-    
-#     conn = pyodbc.connect(CONN_STRING)
-#     cursor = conn.cursor()
-    
+      
     try:
         files_pos = glob.glob(f"{directory}/ISS_STATE_VECT_01_CTRS-{year}*-24H.csv")
         logger.info(f"Reading {files_pos}")
@@ -130,21 +128,18 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
         b = len(stvec_ctrs)
         n = min(c, b)
         a = 6371.2
-
-        
+    
         if n < 86000:
             date_iss = (d0 + timedelta(days=day)).strftime("%Y-%b-%d")
             logger.error(f"Error: value of n is less than 86000 on day {date_iss}")
         
-        # Calculate date strings
         date_iss2 = (d0 + timedelta(days=day)).strftime("%d-%b-%y")
         date_iss = (d0 + timedelta(days=day)).strftime("%Y-%b-%d")
         
-        # Calculate Julian date (approximation)
+
         julian_date = datetime.strptime(date_iss2, "%d-%b-%y").toordinal() - 730486
         t = np.ones(n) * julian_date
         
-        # Generate time vector
         start_time = d0 + timedelta(days=day)
         vec_time = [(start_time + timedelta(seconds=i)).strftime("%Y-%m-%d %H:%M:%S") 
                     for i in range(n)]
@@ -154,42 +149,39 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
         vec_elaps_time = np.array([(datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S") - ref_time).total_seconds() 
                                   for time_str in vec_time])
         
-        # Extract position and velocity data
         pos = stvec_ctrs[:n, 1:4].astype(float)
         vel = stvec_ctrs[:n, 4:7].astype(float)
         quat_lvlh = quat_lvlh[:n, 1:5].astype(float)
         
-        r = np.linalg.norm(pos, axis=1)  # Radial distance
-        theta = np.degrees(np.arccos(pos[:, 2] / r))  # Geocentric colatitude
-        phi = np.degrees(np.arctan2(pos[:, 1], pos[:, 0]))  # Geocentric longitude
-        lat = 90 - theta  # Geographic latitude       
+        r = np.linalg.norm(pos, axis=1)  
+        theta = np.degrees(np.arccos(pos[:, 2] / r))  
+        phi = np.degrees(np.arctan2(pos[:, 1], pos[:, 0])) 
+        lat = 90 - theta        
         
-        # Convert numpy arrays to MATLAB arrays for CHAOS model
+
         r_matlab = matlab.double(r.reshape(-1, 1).tolist())
         theta_matlab = matlab.double(theta.reshape(-1, 1).tolist())
         phi_matlab = matlab.double(phi.reshape(-1, 1).tolist())
         t_matlab = matlab.double(t.reshape(-1, 1).tolist())
         if chaos == True:
-            # 1. Load CHAOS model and compute magnetic field components using MATLAB
-            print(f"Day {day}: CHAOS model calculations...")
-            # Call MATLAB function to compute B_core
-            B_core_matlab = eng.compute_B_core(r_matlab, theta_matlab, phi_matlab, t_matlab, nargout=1)
+
+            logger.info(f"Day {day}: CHAOS model calculations...")
+
+            B_core_matlab = eng.compute_B_core(r_matlab, theta_matlab, phi_matlab, t_matlab, release,nargout=1)
             B_core = np.array(B_core_matlab)
         
-            # Call MATLAB function to compute B_crust
-            B_crust_matlab = eng.compute_B_crust(r_matlab, theta_matlab, phi_matlab, nargout=1)
+
+            B_crust_matlab = eng.compute_B_crust(r_matlab, theta_matlab, phi_matlab,release, nargout=1)
             B_crust = np.array(B_crust_matlab)
         
             B_int_mod = B_core + B_crust
         
-            # Call MATLAB function to compute B_ext
-            B_ext_matlab = eng.compute_B_ext(t_matlab, r_matlab, theta_matlab, phi_matlab, nargout=1)
+ 
+            B_ext_matlab = eng.compute_B_ext(t_matlab, r_matlab, theta_matlab, phi_matlab,release, nargout=1)
             B_ext_mod = np.array(B_ext_matlab)
         
-            # Final B field from CHAOS model
             B_chaos = B_int_mod + B_ext_mod
-        
-            # 2. CHAOS vector B transformation
+
             logger.info(f"Day {day}: Coordinate transformations...")
             X = pos[:, 0]
             Y = pos[:, 1]
@@ -199,13 +191,16 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
             BEast = B_chaos[:, 2]
             normB = np.zeros(n)
         else:
-            print("da fare")
-            return []
-
-        # 3. Conversion to LVLH frame
+            BradIn = prediction_df.iloc[:,0].to_numpy()
+            BNord = prediction_df.iloc[:,1].to_numpy()
+            BEast = prediction_df.iloc[:,2].to_numpy()
+            B_chaos = prediction_df.to_numpy()
+            normB = np.zeros(n)
+            X = pos[:, 0]
+            Y = pos[:, 1]
+            Z = pos[:, 2]
         B_lvlh = np.zeros((n, 3))
         
-        # This loop could be parallelized further with numpy vectorization
         for i in range(n):
             normB[i] = np.linalg.norm(B_chaos[i, :])
             alpha = np.degrees(np.arctan2(np.sqrt(vel[i, 1]**2 + vel[i, 0]**2), vel[i, 2]))
@@ -215,7 +210,6 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
             cosalpha = np.cos(np.radians(alpha))
             sinalpha = np.sin(np.radians(alpha))
             
-            # Coordinates of magnetic field with respect to LVLH frame
             rot_matrix = np.array([
                 [cosalpha, sinalpha, 0],
                 [-sinalpha, cosalpha, 0],
@@ -225,11 +219,11 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
             B_field = np.array([BNord[i], BEast[i], BradIn[i]])
             B_lvlh[i, :] = np.dot(rot_matrix, B_field)
         
-        # 4. Attitude correction
+
         logger.info(f"Day {day}: Attitude corrections...")
         B_att = np.zeros((n, 3))
         
-        # Process quaternion rotations in chunks to speed up
+
         chunk_size = 1000
         for i in range(0, n, chunk_size):
             end_idx = min(i + chunk_size, n)
@@ -238,19 +232,17 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
                 q_matlab = matlab.double([q[0], -q[1], -q[2], -q[3]])  # Inverse quaternion
                 B_field_matlab = matlab.double(B_lvlh[j, :].tolist())
                 
-                # Call MATLAB quatrotate function
                 quatB_matlab = eng.quatrotate(q_matlab, B_field_matlab, nargout=1)
                 B_att[j, :] = np.array(quatB_matlab)
         
-        # 5. Calculate McIlwain L parameter using MATLAB functions
+
         logger.info(f"Day {day}: McIlwain L parameter calculations...")
         
-        # Prepare MATLAB arrays
+
         lat_matlab = matlab.double(lat.tolist())
         phi_matlab = matlab.double(phi.tolist())
-        altitude_matlab = matlab.double((r - a).tolist())  # Altitude above Earth radius
+        altitude_matlab = matlab.double((r - a).tolist()) 
         
-        # Call MATLAB functions for McIlwain L calculation
         vec_FL_matlab, vec_ICODE_matlab, vec_B0_matlab = eng.compute_mcilwain_l(
             lat_matlab, phi_matlab, altitude_matlab, float(year), nargout=3)
         
@@ -258,19 +250,16 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
         vec_ICODE = np.array(vec_ICODE_matlab, dtype=int)
         vec_B0 = np.array(vec_B0_matlab)
         
-        # Calculate geoid altitude using MATLAB WGS84 functions
         X_matlab = matlab.double(X.tolist())
         Y_matlab = matlab.double(Y.tolist())
         Z_matlab = matlab.double(Z.tolist())
         
-        # Call MATLAB function to compute geoid altitude
+
         vec_geoid_alt_matlab = eng.compute_geoid_altitude(X_matlab, Y_matlab, Z_matlab, lat_matlab, phi_matlab, nargout=1)
         vec_geoid_alt = np.array(vec_geoid_alt_matlab)
         
-        # 7. Save output
         logger.info(f"Day {day}: Creating pandas dataframe...")
-        
-        # Create a pandas DataFrame
+
         df = pd.DataFrame({
             'CCSDSTime': vec_elaps_time,
             'Radius': r,
@@ -290,69 +279,94 @@ def process_directory(directory, matlab_queue, year,d0, chaos = True):
             'L': vec_FL.ravel(),
             'Flag': vec_ICODE.ravel()
         })
-        return df
+        #connection_and_queries_to_db.delete_records_from_table(server, database, username, password, table)
+        connection_and_queries_to_db.chaos_orbit_data_injection(server, database, username, password,table,df)
+        return True
     except Exception as e:
         logger.error(f"Error occurred while creating magnetic field database {e}")
-    # finally:
-    #     matlab_queue.put(eng)    
-
-#         # Check to know if the model CHAOS in not valid! Run a code that update a model 
-#         if df[['BAttX', 'BAttY', 'BAttZ']].isnull().values.any():
-#             print("Valori nulli trovati in BAttX, BAttY, BAttZ. Avvio di 'chaos update'...")
-#             subprocess.run(["python", "chaos_update.py"])  
-#         else:
-#             print("Tutti i valori di BAttX, BAttY, BAttZ sono validi. Processo completato con successo.")
+        return False
 
 
-
-#         try:
-#             table_name = 'Orbit3'
-
-#             # Creazione della nuova tabella solo se non esiste
-#             colonne = ', '.join([f"{col} FLOAT" for col in df.columns])
-#             cursor.execute(f"IF OBJECT_ID('{table_name}', 'U') IS NULL "
-#                    f"CREATE TABLE {table_name} ({colonne})")
-#             conn.commit()
-
-#             # Inserimento dei dati in chunk per evitare problemi di memoria
-#             chunk_size = 1000
-#             for i in range(0, len(df), chunk_size):
-#                 chunk = df.iloc[i:i+chunk_size]
-#                 cursor.executemany(
-#                     f"INSERT INTO {table_name} VALUES ({', '.join(['?'] * len(df.columns))})",
-#                     chunk.values.tolist()
-#                 )
-#                 conn.commit()
-
-#             print("Dati inseriti con successo.")
-#         except Exception as e:
-#             print(f"Errore: {e}")
-#             conn.rollback()
-#         finally:
-#             print(f"Day {day}: Processing complete")
-#             return True
+def check_chaos_release_range(releases, target_datetime, mlp_prediction = False):
+  if mlp_prediction == False:
+    if isinstance(target_datetime, str):
+        try:
+            target_dt = datetime.strptime(target_datetime, "%Y/%m/%d")
+        except Exception as e:
+            logger.error(f"Error: Invalid date format {target_datetime}. Expected YYYY/MM/DD")
+            return False, None, False
+    else:
+        target_dt = target_datetime
+    lower_bound =  datetime.strptime("2024/10/18","%Y/%m/%d")  
+    if target_dt < lower_bound:
+        logger.info(f"datatime previous than {lower_bound}, it's unknown which CHAOS model is the corresponding one")
+        return False, False, False
+    latest_release_version = sorted([r["Release"] for r in releases])[-1]
+    latest_date = [r["Ending_date"] for r in releases if r["Release"] == latest_release_version][0]
+    latest_date = datetime.strptime(latest_date,"%Y/%m/%d")
+    if target_dt > latest_date:
+        return True, latest_release_version, True
+    for release in releases:
+        if release["Starting_date"] == "Unknown":
+            continue 
+        starting_date = datetime.strptime(release["Starting_date"],"%Y/%m/%d")
+        ending_date = datetime.strptime(release["Ending_date"],"%Y/%m/%d")
         
+        if starting_date <= target_dt <= ending_date:
+            return True, release["Release"], False
+    return False, False, False        
+  else:
+    return False, True, True
 
-#     finally:
-#         # Return the MATLAB engine to the queue
-#         matlab_queue.put(eng)
-        
-#         # Close the database connection
-#         conn.close()
+def prediction_from_NASA_file(folder, doy, year):
+    directory = folder + "/" + year
+    file_list = os.listdir(directory)
+    for file in file_list:
+        match = re.search(r"GMT(\d+)", file)
+        if match:
+            number = int(match.group(1))
+            if number == doy:
+
+                with open(directory + "/" + file) as f:
+                    header_line = f.readlines()[1].strip()
+                column_names = header_line.split('\t')   
+                df = pd.read_csv(directory + "/" + file, header=1, names=column_names, sep=' ')
+                df["CCSDS"] = df["# UTC"].apply(utils.utc_to_ccsds)
+                X = df[["Bx_(nT)","By_(nT)","Bz_(nT)","latitude_(degrees)","longitude_(degrees)","altitude_(km)","B_tot_(nT)","L-shell"]]
+                model = MLP(input_dim=X.shape[1], output_dim=3)
+                model_2 = MLP(input_dim=X.shape[1], output_dim=3)
+                checkpoint = torch.load('D:/Utenti/difin/LidalDataEngineering/Code/model_weights.pth',map_location=torch.device('cpu'))
+                model.load_state_dict(checkpoint['model_state_dict'])
+                checkpoint = torch.load('D:/Utenti/difin/LidalDataEngineering/Code/model_residual_weights.pth',map_location=torch.device('cpu'))
+                model_2.load_state_dict(checkpoint['model_state_dict'])
+                X = torch.tensor(X.to_numpy(), dtype=torch.float32)
+                model.eval()
+                model_2.eval()
+                with torch.no_grad():
+                        pred = model(X)
+                        res = model_2(X)
+                        results = pd.DataFrame(pred.numpy() + res.numpy(), columns = ["BRadIn", "BNorth", "BEast"])
+                return  results.iloc[:-1,:] #Necessary to match 86399 samples generated by CHAOS
+
 
 
 def main():
     
     path = "D:/Utenti/difin/LidalDataEngineering"
-    env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
-    source_path = os.environ["Argotech_source_path"]
-    destination_path = os.environ["Argotech_destination_path"]
-    
+    management_files = utils.read_json_file(path + "/ManagementFiles/Management_Files.json")
+    js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
+    source_path = js["Argotech_source_path"]
+    destination_path = js["Argotech_destination_path"]
+    server = js["ip_lidal_server"]
+    database = js["db_name"]
+    username = js["db_username"]
+    password = js["db_password"]
+    table = js["Orbit_table_name"]
+    #table = "Orbit4"
     copied_folders = check_and_copy_new_folders(source_path, destination_path)
-    
+
     if copied_folders:
              
-        #destination_folder = os.path.join(destination_path, year)
         directories_to_process = [os.path.join(destination_path, folder) for folder in copied_folders]
         year_list = [re.findall(r'\b\d{4}\b', directory)[0] for directory in directories_to_process]
         doy_list = [int(re.search(r'(\d{3})_\d{4}', directory).group(1)) for directory in directories_to_process]
@@ -360,12 +374,10 @@ def main():
         max_workers = min(cpu_count, 4)  
         matlab_queue = queue.Queue()
     
-
         for _ in range(max_workers):
             logger.info(f"Starting MATLAB Engine {_+1}/{max_workers}")
             eng = matlab.engine.start_matlab()
-        
-        
+               
             full_matlab_path = path + "/Code"
             eng.addpath(full_matlab_path, nargout=0)
         
@@ -374,57 +386,68 @@ def main():
             except Exception as e:
                     logger.warning(f"Warning: OEIS initialization failed: {e}")
         
-
             matlab_queue.put(eng)
-        server = os.environ["ip_lidal_server"]
-        database = os.environ["db_name"]
-        username = os.environ["db_username"]
-        password = os.environ["db_password"]
-        chaos_date = os.environ["chaos_date"].strip()
-        chaos_date = ''.join(c for c in chaos_date if c.isprintable())
-        chaos_datetime = parse(chaos_date)
-        chaos_doy = utils.datetime_to_doy(chaos_datetime)
-
+        server = js["ip_lidal_server"]
+        database = js["db_name"]
+        username = js["db_username"]
+        password = js["db_password"]
+        releases = js["chaos_model_version_and_validation_date_range"]
+        NASA_folder = js["data_storage_folder_NASA"]
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
 
             futures = {}
             for i,directory in enumerate(directories_to_process):
-
+                date = utils.doy_to_datetime(int(year_list[i]),int(doy_list[i]),0,0,0)
+                date = datetime.strftime(date,"%Y/%m/%d")
+                chaos , release, future_injection = check_chaos_release_range(releases, date, mlp_prediction = False)               
                 d0 = datetime(int(year_list[i])-1, 12, 31)
-                if (int(year_list[i]) >= int(chaos_datetime.year)) and (int(doy_list[i]) > chaos_doy):
-                    logger.info(f"CHAOS model release is old for {directory}; mlp method will be used for magnetic field derivation")
+                if chaos is False:
+                    if release is True:
+                        if future_injection:
+                            df = prediction_from_NASA_file(NASA_folder, doy_list[i], year_list[i])
+                            filename = Path(directory).name
+                            management_files["orbit_injection_through_mlp"].append(filename)
+                            logger.info(f"For {directory} mlp method will be used for magnetic field derivation")
+                            future = executor.submit(
+                            process_directory, 
+                            directory, 
+                            matlab_queue,
+                            year_list[i],d0,server,database,username,password,table, release = None, chaos = chaos, prediction_df = df)
+                            futures[future] = directory
+                    else:
+                        logger.error(f""""Date is not correct or selected file is too old, orbit data injection will not proceed, 
+                        use manual injection procedures""")   
+                else:
+                    filename = Path(directory).name
+                    logger.info(f"CHAOS model will be used for magnetic field derivation for {directory}, model release: {release}")
                     future = executor.submit(
                     process_directory, 
                     directory, 
                     matlab_queue,
-                    year_list[i],d0, chaos = False)
+                    year_list[i],d0,server,database, username,password,table, release = release, chaos = chaos)
                     futures[future] = directory
-                else: 
-                    logger.info(f"CHAOS model will be used for magnetic field derivation for {directory}")
-                    future = executor.submit(
-                    process_directory, 
-                    directory, 
-                    matlab_queue,
-                    year_list[i],d0, chaos = True)
-                    futures[future] = directory
+                    if filename in management_files["future_orbit_injection_through_chaos"]:
+                            management_files["future_orbit_injection_through_chaos"].remove(filename)
+                    if filename in management_files["orbit_injection_through_mlp"]:
+                            management_files["orbit_injection_through_mlp"].remove(filename)        
+                    if future_injection:                          
+                            management_files["future_orbit_injection_through_chaos"].append(filename)
             for future in futures:
                 directory = futures[future]
                 try:
                     result = future.result()
-                    #if result:
-                    logger.info(f"Directory {directory} processed successfully")
-                    print(result)
-                    #else:
-                    #    logger.error(f"Directory {directory} skipped or had errors")
+                    if result:
+                        logger.info(f"Directory {directory} processed successfully")
+                    else:
+                        logger.error(f"Directory {directory} skipped or had errors")
                 except Exception as e:
                     print(f"Error processing {directory}: {e}")
     
-
-        print("Shutting down MATLAB engines...")
+        utils.dump_json_file(management_files, path + "/ManagementFiles/Management_Files.json")
+        logger.info("Shutting down MATLAB engines...")
         while not matlab_queue.empty():
             eng = matlab_queue.get()
             eng.quit()
 
 if __name__ == "__main__":
     main()
-

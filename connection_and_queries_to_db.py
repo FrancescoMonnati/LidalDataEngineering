@@ -286,9 +286,9 @@ def NASA_data_injection(server,database,username,password,table_name,temp_table_
             logger.info("Data injection completed successfully.")
             return True
     except Exception as e:
-        logger.error(f"Error occurred during data injection into {table_name} table from \
+        logger.error(f"Error occurred during NASA data injection into {table_name} table from \
                       {temp_table_name} table: {e}")
-        return False     
+        return False   
 
 def delete_records_from_table(server, database, username, password, table_name, where_clause=None):
     if where_clause:
@@ -305,6 +305,34 @@ def delete_records_from_table(server, database, username, password, table_name, 
     except Exception as e:
         logger.error(f"Error occurred when deleting records from '{table_name}': {e}")        
 
+def chaos_orbit_data_injection(server, database, username, password, table_name, df, chunk_size=1000):
+    try:
+        with connect_to_db(server, database, username, password) as cursor:
+            logger.info(f"Inserting CHAOS Orbit data into {table_name} table")
+            total_rows = len(df)
+            rows_inserted = 0
+            columns = ', '.join([f"[{col}] FLOAT" for col in df.columns])
+            create_table_query = (
+                f"IF OBJECT_ID('{table_name}', 'U') IS NULL "
+                f"CREATE TABLE [{table_name}] ({columns})"
+            )
+            cursor.execute(create_table_query)
+            logger.info(f"Table {table_name} checked/created successfully")
+            for i in range(0, total_rows, chunk_size):
+                chunk = df.iloc[i:i+chunk_size]
+                placeholders = ', '.join(['?'] * len(df.columns))
+                insert_query = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                cursor.executemany(insert_query, chunk.values.tolist())
+                
+                rows_inserted += len(chunk)
+                logger.info(f"Inserted {rows_inserted}/{total_rows} rows into {table_name}")
+            
+            logger.info(f"CHAOS Orbit data injection completed successfully. Total rows inserted: {rows_inserted}")
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error occurred during CHAOS orbit data injection into {table_name} table: {e}")
+        return False    
 
 def main():
     path = os.path.dirname(os.getcwd()) + "/difin/LidalDataEngineering"
