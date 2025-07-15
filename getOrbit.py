@@ -90,7 +90,7 @@ def check_and_copy_new_folders(source_path, destination_path, declared_year=Fals
         
         return all_copied_folders if all_copied_folders else False
 
-def process_directory(directory, matlab_queue, year,d0,server,database, username,password,table,release, chaos = True, prediction_df = None):
+def process_directory(directory, matlab_queue, year,d0,server,database, username,password,table,release, chaos = True, prediction_df = None, clearing = False):
 
     dir_name = os.path.basename(directory)
     day = int(dir_name.split("_")[0])
@@ -279,7 +279,11 @@ def process_directory(directory, matlab_queue, year,d0,server,database, username
             'L': vec_FL.ravel(),
             'Flag': vec_ICODE.ravel()
         })
-        #connection_and_queries_to_db.delete_records_from_table(server, database, username, password, table)
+        if clearing:
+            ccsds_start = df["CCSDSTime"].iloc[0]
+            ccsds_end = df["CCSDSTime"].iloc[-1]
+            where_clause = f"CCSDSTime BETWEEN {ccsds_start} AND {ccsds_end}"
+            connection_and_queries_to_db.delete_records_from_table(server, database, username, password, table, where_clause = where_clause)
         connection_and_queries_to_db.chaos_orbit_data_injection(server, database, username, password,table,df)
         return True
     except Exception as e:
@@ -361,8 +365,8 @@ def main():
     database = js["db_name"]
     username = js["db_username"]
     password = js["db_password"]
-    table = js["Orbit_table_name"]
-    #table = "Orbit4"
+    #table = js["Orbit_table_name"]
+    table = "Orbit4"
     copied_folders = check_and_copy_new_folders(source_path, destination_path)
 
     if copied_folders:
@@ -393,6 +397,7 @@ def main():
         password = js["db_password"]
         releases = js["chaos_model_version_and_validation_date_range"]
         NASA_folder = js["data_storage_folder_NASA"]
+        clearing = False
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
 
             futures = {}
@@ -419,19 +424,36 @@ def main():
                         use manual injection procedures""")   
                 else:
                     filename = Path(directory).name
-                    logger.info(f"CHAOS model will be used for magnetic field derivation for {directory}, model release: {release}")
-                    future = executor.submit(
-                    process_directory, 
-                    directory, 
-                    matlab_queue,
-                    year_list[i],d0,server,database, username,password,table, release = release, chaos = chaos)
-                    futures[future] = directory
                     if filename in management_files["future_orbit_injection_through_chaos"]:
                             management_files["future_orbit_injection_through_chaos"].remove(filename)
+                            clearing = True
                     if filename in management_files["orbit_injection_through_mlp"]:
-                            management_files["orbit_injection_through_mlp"].remove(filename)        
-                    if future_injection:                          
-                            management_files["future_orbit_injection_through_chaos"].append(filename)
+                            management_files["orbit_injection_through_mlp"].remove(filename)
+                            clearing = True   
+                    logger.info(f"CHAOS model will be used for magnetic field derivation for {directory}, model release: {release}")
+                    if clearing:
+                        future = executor.submit(
+                        process_directory, 
+                        directory, 
+                        matlab_queue,
+                        year_list[i],d0,server,database, username,password,table, release = release, chaos = chaos,clearing = clearing)
+                        futures[future] = directory
+                    else:   
+                        future = executor.submit(
+                        process_directory, 
+                        directory, 
+                        matlab_queue,
+                        year_list[i],d0,server,database, username,password,table, release = release, chaos = chaos)
+                        futures[future] = directory
+                    if future_injection:
+                        if release in management_files["future_orbit_injection_through_chaos"]:
+                            if isinstance(management_files["future_orbit_injection_through_chaos"][release], list):
+                                management_files["future_orbit_injection_through_chaos"][release].append(filename)
+                            else:
+                                management_files["future_orbit_injection_through_chaos"][release] = [management_files["future_orbit_injection_through_chaos"][release], filename]
+                        else:
+                            management_files["future_orbit_injection_through_chaos"][release] = [filename]                          
+
             for future in futures:
                 directory = futures[future]
                 try:

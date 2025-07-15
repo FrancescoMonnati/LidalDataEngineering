@@ -302,6 +302,7 @@ def delete_records_from_table(server, database, username, password, table_name, 
             cursor.execute(delete_query)
             rows_affected = cursor.rowcount
             logger.info(f"Successfully deleted {rows_affected} records from '{table_name}'.")
+            
     except Exception as e:
         logger.error(f"Error occurred when deleting records from '{table_name}': {e}")        
 
@@ -312,10 +313,23 @@ def chaos_orbit_data_injection(server, database, username, password, table_name,
             total_rows = len(df)
             rows_inserted = 0
             columns = ', '.join([f"[{col}] FLOAT" for col in df.columns])
+            # create_table_query = (
+            #     f"IF OBJECT_ID('{table_name}', 'U') IS NULL "
+            #     f"CREATE TABLE [{table_name}] ({columns})"
+            # )
+            columns_list = []
+            for col in df.columns:
+                if col == 'CCSDSTime':
+                    columns_list.append(f"[{col}] FLOAT PRIMARY KEY")
+                elif col == "FLAG":
+                    columns_list.append(f"[{col}] INT")
+                else:
+                    columns_list.append(f"[{col}] FLOAT")
+            columns = ', '.join(columns_list)
             create_table_query = (
                 f"IF OBJECT_ID('{table_name}', 'U') IS NULL "
                 f"CREATE TABLE [{table_name}] ({columns})"
-            )
+                )   
             cursor.execute(create_table_query)
             logger.info(f"Table {table_name} checked/created successfully")
             for i in range(0, total_rows, chunk_size):
