@@ -289,7 +289,8 @@ def process_directory(directory, matlab_queue, year,d0,server,database, username
     except Exception as e:
         logger.error(f"Error occurred while creating magnetic field database {e}")
         return False
-
+    finally:
+         matlab_queue.put(eng)
 
 def check_chaos_release_range(releases, target_datetime, mlp_prediction = False):
   if mlp_prediction == False:
@@ -361,12 +362,14 @@ def main():
     js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
     source_path = js["Argotech_source_path"]
     destination_path = js["Argotech_destination_path"]
-    server = js["ip_lidal_server"]
+    server = js["ip_lidal_edge"]
     database = js["db_name"]
     username = js["db_username"]
     password = js["db_password"]
-    #table = js["Orbit_table_name"]
-    table = "Orbit4"
+    releases = js["chaos_model_version_and_validation_date_range"]
+    NASA_folder = js["data_storage_folder_NASA"]
+    table = js["Orbit_table_name"]
+    #table = "Orbit4"
     copied_folders = check_and_copy_new_folders(source_path, destination_path)
 
     if copied_folders:
@@ -391,13 +394,8 @@ def main():
                     logger.warning(f"Warning: OEIS initialization failed: {e}")
         
             matlab_queue.put(eng)
-        server = js["ip_lidal_server"]
-        database = js["db_name"]
-        username = js["db_username"]
-        password = js["db_password"]
-        releases = js["chaos_model_version_and_validation_date_range"]
-        NASA_folder = js["data_storage_folder_NASA"]
-        clearing = False
+
+        
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
 
             futures = {}
@@ -406,6 +404,7 @@ def main():
                 date = datetime.strftime(date,"%Y/%m/%d")
                 chaos , release, future_injection = check_chaos_release_range(releases, date, mlp_prediction = False)               
                 d0 = datetime(int(year_list[i])-1, 12, 31)
+                clearing = True
                 if chaos is False:
                     if release is True:
                         if future_injection:

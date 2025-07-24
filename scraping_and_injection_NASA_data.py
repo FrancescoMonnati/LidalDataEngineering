@@ -229,7 +229,7 @@ def main():
     env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
     destination_folder = os.environ["data_injection_folder_NASA"]
     source_folder = os.environ["data_storage_folder_NASA"]
-    server = os.environ["ip_lidal_server"]
+    server = os.environ["ip_lidal_edge"]
     database = os.environ["db_name"]
     username = os.environ["db_username"]
     password = os.environ["db_password"]

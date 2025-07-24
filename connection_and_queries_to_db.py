@@ -355,7 +355,7 @@ def main():
         js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
         js_management = utils.read_json_file(path + "/ManagementFiles/Management_Files.json")
         temp_list = js_management["temporary_db"]
-        server = js["ip_lidal_server"]
+        server = js["ip_lidal_edge"]
         database_temp = js["db_temp_name"]
         database = js["db_name"]
         username = js["db_username"]

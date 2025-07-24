@@ -69,6 +69,7 @@ def get_environmental_variable(file_path):
             os.environ["receiver_email_address_2"] = js["receiver_email_address"][1]
             os.environ["destination_folder_chaos"] = js["destination_folder_chaos"]
             os.environ["ip_lidal_server"] = js["ip_lidal_server"]
+            os.environ["ip_lidal_edge"] = js["ip_lidal_edge"]
             os.environ["db_name"] = js["db_name"]
             os.environ["db_temp_name"] = js["db_temp_name"]
             os.environ["db_username"] = js["db_username"]
