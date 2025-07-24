@@ -7,5 +7,6 @@ The system performs key data engineering tasks, including:
 - Cleaning and preprocessing of raw LIDAL measurements  
 - Standardization and renaming of data files  
 - Integration of geomagnetic and environmental metadata
+- Injection of processed data into a structured SQL database for downstream analysis and archival
 
-  This Python implementation serves as a unified, maintainable framework for handling LIDAL data in a more efficient and scalable manner, relying on legacy code developed in MATLAB and C#.
+This Python implementation serves as a unified, maintainable framework for handling LIDAL data in a more efficient and scalable manner, relying on legacy code developed in MATLAB and C#.
