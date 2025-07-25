@@ -205,7 +205,6 @@ def delete_temp_database(server, username, password, temp_db_name):
     ALTER DATABASE [{temp_db_name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
     DROP DATABASE [{temp_db_name}];
     """
-
     logger.info(f"Attempting to drop temporary database: {temp_db_name}")
     try:
 
@@ -291,10 +290,15 @@ def NASA_data_injection(server,database,username,password,table_name,temp_table_
         return False   
 
 def delete_records_from_table(server, database, username, password, table_name, where_clause=None):
+    not_main_table_list = ["Orbit2", "Orbit3", "Orbit4", "OrbitStu"]
     if where_clause:
         delete_query = f"DELETE FROM [{database}].[dbo].[{table_name}] WHERE {where_clause}"
     else:
-        delete_query = f"DELETE FROM [{database}].[dbo].[{table_name}]"  
+        if table_name in not_main_table_list:
+            delete_query = f"DELETE FROM [{database}].[dbo].[{table_name}]"
+        else:
+            logger.warning(f"Attempting to delete records from a main table without a where clause: {table_name}")
+            return False    
     
     logger.info(f"Attempting to delete records from table: {table_name}")
     try:
@@ -302,9 +306,10 @@ def delete_records_from_table(server, database, username, password, table_name, 
             cursor.execute(delete_query)
             rows_affected = cursor.rowcount
             logger.info(f"Successfully deleted {rows_affected} records from '{table_name}'.")
-            
+            return True
     except Exception as e:
-        logger.error(f"Error occurred when deleting records from '{table_name}': {e}")        
+        logger.error(f"Error occurred when deleting records from '{table_name}': {e}")
+        return False
 
 def chaos_orbit_data_injection(server, database, username, password, table_name, df, chunk_size=1000):
     try:

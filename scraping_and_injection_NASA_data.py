@@ -250,7 +250,9 @@ def main():
                ccsds_start = utils.utc_to_ccsds(utc)
                injection = connection_and_queries_to_db.NASA_data_injection(server,database, username, password,table_name,table_temp,ccsds_start)
                if injection:
-                    connection_and_queries_to_db.delete_records_from_table(server,database, username, password, table_temp)
+                    cleared = connection_and_queries_to_db.delete_records_from_table(server,database, username, password, table_temp)
+                    if not cleared:
+                        logger.error("Error occurred while clearing table_temp")
                     moving_files(source_folder,destination_folder)
 
        else:

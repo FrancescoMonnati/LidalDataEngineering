@@ -296,13 +296,18 @@ def process_directory(directory, matlab_queue, year,d0,server,database, username
             ccsds_start = df["CCSDSTime"].iloc[0]
             ccsds_end = df["CCSDSTime"].iloc[-1]
             where_clause = f"CCSDSTime BETWEEN {ccsds_start} AND {ccsds_end}"
-            connection_and_queries_to_db.delete_records_from_table(server, database, username, password, table, where_clause = where_clause)
-        connection_and_queries_to_db.chaos_orbit_data_injection(server, database, username, password,table,df)
+            cleared = connection_and_queries_to_db.delete_records_from_table(server, database, username, password, table, where_clause = where_clause)
+            if cleared:
+                connection_and_queries_to_db.chaos_orbit_data_injection(server, database, username, password,table,df)
+        else:
+            connection_and_queries_to_db.chaos_orbit_data_injection(server, database, username, password,table,df)       
 
-        file_processing_time = time.time() - file_start_time
-        logger.info(f"Day {day}: Processing completed in {file_processing_time/60:.2f} minutes")
+            file_processing_time = time.time() - file_start_time
+            logger.info(f"Day {day}: Processing completed in {file_processing_time/60:.2f} minutes")
 
-        return True
+            return True
+        else:
+            return False    
     except Exception as e:
         file_processing_time = time.time() - file_start_time
         logger.error(f"Error occurred while creating magnetic field database {e} (after {file_processing_time/60:.2f} minutes)")
