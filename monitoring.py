@@ -193,22 +193,23 @@ class Monitoring_Lidal_Files:
 
 
 def main():
-    path = os.path.dirname(os.getcwd()) + "/difin/LidalDataEngineering"
     
+    path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
         js = utils.read_json_file(path + "/Code/Environmental_Variables.json")["nas_server"]
         NAS_server = [name for name in js.values()]
         connections = []
+        env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
         for name in NAS_server:
              connection = utils.is_nas_online(name)
              connections.append(connection)
-        if all(connection != False for connection in connections):     
-            monitor = Monitoring_Lidal_Files("Y:/Lidal complete", path + "/ManagementFiles/Management_Files.json","Y:/Lidal TorV temp")
+        monitor = Monitoring_Lidal_Files("Y:/Lidal complete", path + "/ManagementFiles/Management_Files.json","Y:/Lidal TorV temp")     
+        if (all(connections) or (connections.count(False) == 1 and not utils.is_nas_online('AlteaNAS'))):    
             new_files,year_list = monitor.check_for_new_files()
             new_files = monitor.clean_files(new_files,year_list)
             monitor.temporary_db_list(new_files)
-        env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
+        
         
         filtered_logs = monitor.extract_logs()
         if filtered_logs != []:             

@@ -354,7 +354,7 @@ def chaos_orbit_data_injection(server, database, username, password, table_name,
         return False    
 
 def main():
-    path = os.path.dirname(os.getcwd()) + "/difin/LidalDataEngineering"
+    path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
         js = utils.read_json_file(path + "/Code/Environmental_Variables.json")

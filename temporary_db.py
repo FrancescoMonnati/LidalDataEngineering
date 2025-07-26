@@ -80,7 +80,7 @@ class TemporaryDB(Monitoring_Lidal_Files):
 
 
 def main():
-    path = os.path.dirname(os.getcwd()) + "/difin/LidalDataEngineering"
+    path = "D:/Utenti/difin/LidalDataEngineering"
     try:
         
         temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
