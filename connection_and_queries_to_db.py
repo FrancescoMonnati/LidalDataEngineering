@@ -366,8 +366,8 @@ def main():
         username = js["db_username"]
         password = js["db_password"]
         ccsds_start = int(checking_last_pedestal(server,database,username,password)/1000)
-        #drop_success = drop_columns_from_tmp_db(server,database_temp,username,password)
-        drop_success = True
+        drop_success = drop_columns_from_tmp_db(server,database_temp,username,password)
+
         if drop_success:
                 results = [utils.extract_doy(f) for f in temp_list]
                 doy_lists, time_lists,year_lists = zip(*results)
