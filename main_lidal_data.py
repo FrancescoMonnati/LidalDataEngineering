@@ -55,4 +55,7 @@ path = "D:/Utenti/difin/LidalDataEngineering"
             if mail_bool:
                 logging.info(f"Mail sent successfully")
             else:
-                logging.error(f"Error in sending mail")    
+                logging.error(f"Error in sending mail")
+
+if __name__ == "__main__":
+    main()                 

@@ -133,7 +133,7 @@ def data_injection(server, database,database_temp, username, password, ccsds_tim
     SELECT * FROM [{database_temp}].[dbo].[LidalErrors]
     WHERE CCSDSTimeExt/1000 BETWEEN @CcsdsTimeStart AND @CcsdsTimeStop;
 
-    INSERT INTO [{database}][dbo].[LidalErrorDetails]
+    INSERT INTO [{database}].[dbo].[LidalErrorDetails]
     SELECT * FROM [{database_temp}].[dbo].[LidalErrorDetails]
     WHERE LidalErrorCCSDSTimeExt/1000 BETWEEN @CcsdsTimeStart AND @CcsdsTimeStop;
 
@@ -218,7 +218,7 @@ def delete_temp_database(server, username, password, temp_db_name):
 def checking_last_pedestal(server,database,username,password):
     query = f"""
         SELECT TOP 1 CCSDSTimeExtStart
-        FROM .dbo.AlteaSessions
+        FROM [{database}].dbo.AlteaSessions
         ORDER BY CCSDSTimeExtStart DESC;
         """
     try:
@@ -275,7 +275,7 @@ def NASA_data_injection(server,database,username,password,table_name,temp_table_
 	  ,[BLvlhZ]
 	  ,100
 	  ,100
-      FROM .[dbo].[{temp_table_name}] 
+      FROM [{database}].[dbo].[{temp_table_name}] 
       WHERE [UTC]-315964800>={ccsds_start};
         """
     try:
@@ -366,7 +366,8 @@ def main():
         username = js["db_username"]
         password = js["db_password"]
         ccsds_start = int(checking_last_pedestal(server,database,username,password)/1000)
-        drop_success = drop_columns_from_tmp_db(server,database_temp,username,password)
+        #drop_success = drop_columns_from_tmp_db(server,database_temp,username,password)
+        drop_success = True
         if drop_success:
                 results = [utils.extract_doy(f) for f in temp_list]
                 doy_lists, time_lists,year_lists = zip(*results)

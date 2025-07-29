@@ -4,7 +4,6 @@ import pandas as pd
 import glob
 import pyodbc
 import matlab.engine
-import threading
 import queue
 import shutil
 from concurrent.futures import ThreadPoolExecutor
