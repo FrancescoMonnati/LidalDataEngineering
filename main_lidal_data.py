@@ -5,12 +5,14 @@ import utils
 import sending_email
 import logging
 import connection_and_queries_to_db
+from temporary_db import TemporaryDB
 
 def main():
-path = "D:/Utenti/difin/LidalDataEngineering"
+    path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
-        js = utils.read_json_file(path + "/Code/Environmental_Variables.json")["nas_server"]
+        nas = utils.read_json_file(path + "/Code/Environmental_Variables.json")["nas_server"]
+        js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
         js_management = utils.read_json_file(path + "/ManagementFiles/Management_Files.json")
         temp_list = js_management["temporary_db"]
         server = js["ip_lidal_edge"]
@@ -19,7 +21,7 @@ path = "D:/Utenti/difin/LidalDataEngineering"
         username = js["db_username"]
         password = js["db_password"]
 
-        NAS_server = [name for name in js.values()]
+        NAS_server = [name for name in nas.values()]
         connections = []
         env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
         for name in NAS_server:
@@ -56,6 +58,8 @@ path = "D:/Utenti/difin/LidalDataEngineering"
                 logging.info(f"Mail sent successfully")
             else:
                 logging.error(f"Error in sending mail")
+    except Exception as e:
+                logging.error(f"Error in main lidal data execution: {e}")
 
 if __name__ == "__main__":
     main()                 

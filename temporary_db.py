@@ -22,7 +22,8 @@ class TemporaryDB(Monitoring_Lidal_Files):
                     
                     new_files_dictionary = defaultdict(list)
 
-                    for y in new_files[:7]:
+                    #for y in new_files[:7]:
+                    for y in new_files:
                             year = y[5:9] 
                             new_files_dictionary[year].append(y)
 
