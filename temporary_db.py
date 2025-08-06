@@ -19,7 +19,7 @@ class TemporaryDB(Monitoring_Lidal_Files):
                 new_files = sorted(self.management_files["temporary_db"])
                 
                 if new_files != []:
-                    
+                    removing = False
                     new_files_dictionary = defaultdict(list)
 
                     #for y in new_files[:7]:
@@ -61,12 +61,18 @@ class TemporaryDB(Monitoring_Lidal_Files):
                                 f.write(file + "\n")
                         self.logger.info(f"File {txt_file} created and {len(v)} files copied")
                         self.logger.info(f"Creating temporary db")
-                        creating_temporary_db.creating_temporary_db(self.target_folder,"file_list.txt","temporary_db.log")
-                        self.logger.info(f"Temporary db created")
-                    self.temporary_db_list([], remove = True)
-          
+                        created = creating_temporary_db.creating_temporary_db(self.target_folder,"file_list.txt","temporary_db.log")
+                        if created:
+                            removing = True
+                            self.logger.info(f"Temporary db created")   
+
+                    self.temporary_db_list([], remove = removing)
+                    return True
+                else:
+                    return False
             except Exception as e:
                     self.logger.error(f"Error in temporary db execution: {e}")
+                    return False
 
         def clean_directories(self):
             try:
@@ -86,7 +92,7 @@ def main():
         
         temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
         #temporary_db.clean_directories()
-        temporary_db.temporary_sql()
+        db_created = temporary_db.temporary_sql()
         env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
         filtered_logs = temporary_db.extract_logs()
 

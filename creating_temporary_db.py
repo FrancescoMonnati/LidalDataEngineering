@@ -22,8 +22,11 @@ def creating_temporary_db(directory, txt_file, log_file):
     
         if result is not None:
              logger.info(f"Created temporary db correctly")
+             return True
         else:
              logger.error(f"Error occurred calling {exe_path}, code {result.stderr}")
-                #return result.stdout.splitlines()[-2]    
+                #return result.stdout.splitlines()[-2]
+             return False    
     except Exception as e:
-            logger.error(f"Error occurred while creating temporary db: {e}")  
+            logger.error(f"Error occurred while creating temporary db: {e}")
+            return False

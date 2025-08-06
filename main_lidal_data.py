@@ -32,21 +32,21 @@ def main():
             new_files,year_list = monitor.check_for_new_files()
             new_files = monitor.clean_files(new_files,year_list)
             monitor.temporary_db_list(new_files)
-
-            temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
-            #temporary_db.clean_directories()
-            temporary_db.temporary_sql()
-                  
-            ccsds_start = int(connection_and_queries_to_db.checking_last_pedestal(server,database,username,password)/1000)
-            drop_success = connection_and_queries_to_db.drop_columns_from_tmp_db(server,database_temp,username,password)
-            if drop_success:
-                results = [utils.extract_doy(f) for f in temp_list]
-                doy_lists, time_lists,year_lists = zip(*results)
-                dt = utils.doy_to_datetime(int(year_lists[-1][0]),int(doy_lists[-1][-1]),int(time_lists[-1][-1][:2]),int(time_lists[-1][-1][2:4]),int(time_lists[-1][-1][4:6]))
-                ccsds_stop = utils.datetime_to_ccsds(dt)
-                data_injection_success = connection_and_queries_to_db.data_injection(server, database,database_temp, username, password, ccsds_start, ccsds_stop)
-                if data_injection_success:
-                    connection_and_queries_to_db.delete_temp_database(server, username, password, database_temp)    
+            if len(temp_list) > 1:
+                temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
+                #temporary_db.clean_directories()
+                db_created = temporary_db.temporary_sql()
+                if db_created:    
+                    ccsds_start = int(connection_and_queries_to_db.checking_last_pedestal(server,database,username,password)/1000)
+                    drop_success = connection_and_queries_to_db.drop_columns_from_tmp_db(server,database_temp,username,password)
+                    if drop_success:
+                        results = [utils.extract_doy(f) for f in temp_list]
+                        doy_lists, time_lists,year_lists = zip(*results)
+                        dt = utils.doy_to_datetime(int(year_lists[-1][0]),int(doy_lists[-1][-1]),int(time_lists[-1][-1][:2]),int(time_lists[-1][-1][2:4]),int(time_lists[-1][-1][4:6]))
+                        ccsds_stop = utils.datetime_to_ccsds(dt)
+                        data_injection_success = connection_and_queries_to_db.data_injection(server, database,database_temp, username, password, ccsds_start, ccsds_stop)
+                        if data_injection_success:
+                            connection_and_queries_to_db.delete_temp_database(server, username, password, database_temp)    
 
         filtered_logs = monitor.extract_logs()
         if filtered_logs != []:             

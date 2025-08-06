@@ -40,8 +40,8 @@ class Monitoring_Lidal_Files:
         current_date = datetime.now().strftime('%Y-%m-%d')
         with open(self.month_dir + '/file_log.log', 'r') as file:
             logs = file.readlines()
-        filtered_logs = [log for log in logs if current_date in log and re.search(r"\b(ERROR|CRITICAL)\b", log)]
-    
+        #filtered_logs = [log for log in logs if current_date in log and re.search(r"\b(ERROR|CRITICAL)\b", log)]
+        filtered_logs = [log for log in logs if log >= current_date and re.search(r"\b(ERROR|CRITICAL)\b", log)]
         return filtered_logs     
     
     def load_management_file(self):
