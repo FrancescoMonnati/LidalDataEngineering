@@ -12,6 +12,10 @@ import time
 import os
 import re
 from datetime import datetime, timedelta
+import monitoring
+import sending_email
+
+logger = utils.setup_logging()
 
 def chaos_main():
 
@@ -20,7 +24,7 @@ def chaos_main():
     try:
         env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
         chaos_url = os.environ["chaos_url"]
-        date, release, html_content = get_latest_chaos_version(chaos_url)
+        date, release, html_content = chaos_update.get_latest_chaos_version(chaos_url)
         current_date = os.environ["chaos_date"]
         current_release = os.environ["chaos_release"]
         destination_folder = os.environ["destination_folder_chaos"]
@@ -58,7 +62,7 @@ def chaos_main():
 
 
 def main():
-
+    current_date = datetime.now().strftime('%Y-%m-%d')
     path = "D:/Utenti/difin/LidalDataEngineering"
     management_files = utils.read_json_file(path + "/ManagementFiles/Management_Files.json")
     js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
@@ -193,7 +197,22 @@ def main():
             eng = matlab_queue.get()
             eng.quit()
 
-
+    monitor = monitoring.Monitoring_Lidal_Files(
+            "Y:/Lidal complete", 
+            path + "/ManagementFiles/Management_Files.json",
+            "Y:/Lidal TorV temp"
+        )
+    
+    filtered_logs = monitor.extract_logs(current_date) 
+    if filtered_logs != []:             
+            email_body = "Report: \n"
+            for log in filtered_logs:
+                email_body += log.strip() + "\n"
+            mail_bool = sending_email.send_ticket_report(email_body)        
+            if mail_bool:
+                logger.info(f"Mail sent successfully")
+            else:
+                logger.error(f"Error in sending mail")
 if __name__ == "__main__":
     chaos_main()
     main()        

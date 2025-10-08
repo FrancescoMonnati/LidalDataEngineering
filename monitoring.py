@@ -35,9 +35,8 @@ class Monitoring_Lidal_Files:
         )
         self.logger = logging.getLogger(__name__)
 
-    def extract_logs(self):
+    def extract_logs(self, current_date):
     
-        current_date = datetime.now().strftime('%Y-%m-%d')
         with open(self.month_dir + '/file_log.log', 'r') as file:
             logs = file.readlines()
         #filtered_logs = [log for log in logs if current_date in log and re.search(r"\b(ERROR|CRITICAL)\b", log)]
@@ -193,7 +192,8 @@ class Monitoring_Lidal_Files:
 
 
 def main():
-    
+
+    current_date = datetime.now().strftime('%Y-%m-%d')
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
@@ -211,7 +211,7 @@ def main():
             monitor.temporary_db_list(new_files)
         
         
-        filtered_logs = monitor.extract_logs()
+        filtered_logs = monitor.extract_logs(current_date)
         if filtered_logs != []:             
             email_body = "Report: \n"
             for log in filtered_logs:

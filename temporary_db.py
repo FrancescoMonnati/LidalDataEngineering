@@ -84,9 +84,36 @@ class TemporaryDB(Monitoring_Lidal_Files):
             except Exception as e:
                     self.logger.error(f"Error occurred while cleaning directories: {e}")
 
+        def db_backup(self, backup_directory):
+            try:
+                altea_db_files = os.listdir(os.path.join(self.target_folder, "ALTEA"))
+                hk_db_files = os.listdir(os.path.join(self.target_folder, "HK"))
+                lidal_db_files = os.listdir(os.path.join(self.target_folder, "LIDAL"))
+
+                os.makedirs(os.path.join(backup_directory, "AlteaSqlite"), exist_ok=True)
+                os.makedirs(os.path.join(backup_directory, "LidalSqlite"), exist_ok=True)
+                os.makedirs(os.path.join(backup_directory, "HK"), exist_ok=True)
+                for file in altea_db_files:
+                    src = os.path.join(self.target_folder, "ALTEA", file)
+                    dst = os.path.join(backup_directory, "AlteaSqlite", file)
+                    shutil.move(src, dst)
+                for file in lidal_db_files:
+                    src = os.path.join(self.target_folder, "LIDAL", file)
+                    dst = os.path.join(backup_directory, "LidalSqlite", file)
+                    shutil.move(src, dst)
+                for file in hk_db_files:
+                    src = os.path.join(self.target_folder, "HK", file)
+                    dst = os.path.join(backup_directory, "HK", file)
+                    shutil.move(src, dst)
+                dest = os.path.join(backup_directory, "temporary_db.log")
+                shutil.move(self.month_dir, dest)
+                self.logger.info(f"Successfully backed up database files to {backup_directory}")
+            except Exception as e:
+                    self.logger.error(f"Error occurred while backuping db files: {e}")
 
 
 def main():
+    current_date = datetime.now().strftime('%Y-%m-%d')
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
         
@@ -94,7 +121,7 @@ def main():
         #temporary_db.clean_directories()
         db_created = temporary_db.temporary_sql()
         env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
-        filtered_logs = temporary_db.extract_logs()
+        filtered_logs = temporary_db.extract_logs(current_date)
 
         if filtered_logs != []:             
             email_body = "Report: \n"

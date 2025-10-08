@@ -6,8 +6,10 @@ import sending_email
 import logging
 import connection_and_queries_to_db
 from temporary_db import TemporaryDB
+from datetime import datetime
 
 def main():
+    current_date = datetime.now().strftime('%Y-%m-%d')
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
@@ -47,8 +49,8 @@ def main():
                         data_injection_success = connection_and_queries_to_db.data_injection(server, database,database_temp, username, password, ccsds_start, ccsds_stop)
                         if data_injection_success:
                             connection_and_queries_to_db.delete_temp_database(server, username, password, database_temp)    
-
-        filtered_logs = monitor.extract_logs()
+                            temporary_db.db_backup("X:/")
+        filtered_logs = monitor.extract_logs(current_date)
         if filtered_logs != []:             
             email_body = "Report: \n"
             for log in filtered_logs:

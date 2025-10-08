@@ -18,6 +18,8 @@ from dateutil.parser import parse
 import connection_and_queries_to_db
 import torch
 import time
+import monitoring
+import sending_email
 
 logger = utils.setup_logging()
 
@@ -408,7 +410,8 @@ class TimeEstimator:
             logger.info(f"Average time per file: {avg_time/60:.2f} min")
 
 def main():
-    
+
+    current_date = datetime.now().strftime('%Y-%m-%d')
     path = "D:/Utenti/difin/LidalDataEngineering"
     management_files = utils.read_json_file(path + "/ManagementFiles/Management_Files.json")
     js = utils.read_json_file(path + "/Code/Environmental_Variables.json")
@@ -542,5 +545,21 @@ def main():
             eng = matlab_queue.get()
             eng.quit()
 
+    monitor = monitoring.Monitoring_Lidal_Files(
+            "Y:/Lidal complete", 
+            path + "/ManagementFiles/Management_Files.json",
+            "Y:/Lidal TorV temp"
+        )
+    
+    filtered_logs = monitor.extract_logs(current_date) 
+    if filtered_logs != []:             
+            email_body = "Report: \n"
+            for log in filtered_logs:
+                email_body += log.strip() + "\n"
+            mail_bool = sending_email.send_ticket_report(email_body)        
+            if mail_bool:
+                logger.info(f"Mail sent successfully")
+            else:
+                logger.error(f"Error in sending mail")
 if __name__ == "__main__":
     main()

@@ -7,7 +7,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-
+import temporary_db
 
 logger = utils.setup_logging()
 
@@ -354,6 +354,7 @@ def chaos_orbit_data_injection(server, database, username, password, table_name,
         return False    
 
 def main():
+    current_date = datetime.now().strftime('%Y-%m-%d')
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
@@ -369,7 +370,7 @@ def main():
         drop_success = drop_columns_from_tmp_db(server,database_temp,username,password)
 
         if drop_success:
-                results = [utils.extract_doy(f) for f in temp_list]
+                results = [utils.extract_doy(f) for f in sorted(temp_list)]
                 doy_lists, time_lists,year_lists = zip(*results)
                 dt = utils.doy_to_datetime(int(year_lists[-1][0]),int(doy_lists[-1][-1]),int(time_lists[-1][-1][:2]),int(time_lists[-1][-1][2:4]),int(time_lists[-1][-1][4:6]))
                 ccsds_stop = utils.datetime_to_ccsds(dt)
@@ -382,8 +383,9 @@ def main():
             path + "/ManagementFiles/Management_Files.json",
             "Y:/Lidal TorV temp"
         )
-    
-        filtered_logs = monitor.extract_logs() 
+        temp_db = temporary_db.TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
+        temp_db.db_backup("X:/")
+        filtered_logs = monitor.extract_logs(current_date) 
         if filtered_logs != []:             
             email_body = "Report: \n"
             for log in filtered_logs:
