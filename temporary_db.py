@@ -88,22 +88,24 @@ class TemporaryDB(Monitoring_Lidal_Files):
             try:
                 altea_db_files = os.listdir(os.path.join(self.target_folder, "ALTEA"))
                 hk_db_files = os.listdir(os.path.join(self.target_folder, "HK"))
-                lidal_db_files = os.listdir(os.path.join(self.target_folder, "LIDAL"))
-
-                os.makedirs(os.path.join(backup_directory, "AlteaSqlite"), exist_ok=True)
-                os.makedirs(os.path.join(backup_directory, "LidalSqlite"), exist_ok=True)
-                os.makedirs(os.path.join(backup_directory, "HK"), exist_ok=True)
+                lidal_db_files = os.listdir(os.path.join(self.target_folder, "LIDAL"))         
                 for file in altea_db_files:
+                    year = file[5:9]
                     src = os.path.join(self.target_folder, "ALTEA", file)
-                    dst = os.path.join(backup_directory, "AlteaSqlite", file)
+                    os.makedirs(os.path.join(backup_directory, "AlteaSqlite",year), exist_ok=True)
+                    dst = os.path.join(backup_directory, "AlteaSqlite", year, file)
                     shutil.move(src, dst)
                 for file in lidal_db_files:
+                    year = file[5:9]
+                    os.makedirs(os.path.join(backup_directory, "LidalSqlite", year), exist_ok=True)
                     src = os.path.join(self.target_folder, "LIDAL", file)
-                    dst = os.path.join(backup_directory, "LidalSqlite", file)
+                    dst = os.path.join(backup_directory, "LidalSqlite", year, file)
                     shutil.move(src, dst)
                 for file in hk_db_files:
+                    year = file[5:9]
+                    os.makedirs(os.path.join(backup_directory, "HK", year), exist_ok=True)
                     src = os.path.join(self.target_folder, "HK", file)
-                    dst = os.path.join(backup_directory, "HK", file)
+                    dst = os.path.join(backup_directory, "HK", year, file)
                     shutil.move(src, dst)
                 dest = os.path.join(backup_directory, "temporary_db.log")
                 shutil.move(self.month_dir, dest)
