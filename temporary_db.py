@@ -64,7 +64,9 @@ class TemporaryDB(Monitoring_Lidal_Files):
                         created = creating_temporary_db.creating_temporary_db(self.target_folder,"file_list.txt","temporary_db.log")
                         if created:
                             removing = True
-                            self.logger.info(f"Temporary db created")   
+                            self.logger.info(f"Temporary db created")
+                        else:
+                             return False     
 
                     self.temporary_db_list([], remove = removing)
                     return True
@@ -86,27 +88,31 @@ class TemporaryDB(Monitoring_Lidal_Files):
 
         def db_backup(self, backup_directory):
             try:
+                doy_inf = self.target_folder.split('_')[1]
                 altea_db_files = os.listdir(os.path.join(self.target_folder, "ALTEA"))
                 hk_db_files = os.listdir(os.path.join(self.target_folder, "HK"))
                 lidal_db_files = os.listdir(os.path.join(self.target_folder, "LIDAL"))         
                 for file in altea_db_files:
-                    year = file[5:9]
-                    src = os.path.join(self.target_folder, "ALTEA", file)
-                    os.makedirs(os.path.join(backup_directory, "AlteaSqlite",year), exist_ok=True)
-                    dst = os.path.join(backup_directory, "AlteaSqlite", year, file)
-                    shutil.move(src, dst)
+                    if doy_inf not in file:
+                        year = file[5:9]
+                        src = os.path.join(self.target_folder, "ALTEA", file)
+                        os.makedirs(os.path.join(backup_directory, "AlteaSqlite",year), exist_ok=True)
+                        dst = os.path.join(backup_directory, "AlteaSqlite", year, file)
+                        shutil.move(src, dst)
                 for file in lidal_db_files:
-                    year = file[5:9]
-                    os.makedirs(os.path.join(backup_directory, "LidalSqlite", year), exist_ok=True)
-                    src = os.path.join(self.target_folder, "LIDAL", file)
-                    dst = os.path.join(backup_directory, "LidalSqlite", year, file)
-                    shutil.move(src, dst)
+                    if doy_inf not in file:
+                        year = file[5:9]
+                        os.makedirs(os.path.join(backup_directory, "LidalSqlite", year), exist_ok=True)
+                        src = os.path.join(self.target_folder, "LIDAL", file)
+                        dst = os.path.join(backup_directory, "LidalSqlite", year, file)
+                        shutil.move(src, dst)
                 for file in hk_db_files:
-                    year = file[5:9]
-                    os.makedirs(os.path.join(backup_directory, "HK", year), exist_ok=True)
-                    src = os.path.join(self.target_folder, "HK", file)
-                    dst = os.path.join(backup_directory, "HK", year, file)
-                    shutil.move(src, dst)
+                    if doy_inf not in file:
+                        year = file[5:9]
+                        os.makedirs(os.path.join(backup_directory, "HK", year), exist_ok=True)
+                        src = os.path.join(self.target_folder, "HK", file)
+                        dst = os.path.join(backup_directory, "HK", year, file)
+                        shutil.move(src, dst)
                 dest = os.path.join(backup_directory, "temporary_db.log")
                 shutil.move(self.month_dir, dest)
                 self.logger.info(f"Successfully backed up database files to {backup_directory}")
@@ -116,13 +122,15 @@ class TemporaryDB(Monitoring_Lidal_Files):
 
 def main():
     current_date = datetime.now().strftime('%Y-%m-%d')
+    print(current_date)
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
         
         temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
         #temporary_db.clean_directories()
         db_created = temporary_db.temporary_sql()
-        env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
+        utils.get_environmental_variable("D:/Utenti/difin/LidalDataEngineering/Code/Environmental_Variables.json")
+        temporary_db.db_backup("X:/")
         filtered_logs = temporary_db.extract_logs(current_date)
 
         if filtered_logs != []:             

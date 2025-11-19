@@ -32,8 +32,13 @@ def main():
         monitor = Monitoring_Lidal_Files("Y:/Lidal complete", path + "/ManagementFiles/Management_Files.json","Y:/Lidal TorV temp")     
         if (all(connections) or (connections.count(False) == 1 and not utils.is_nas_online('AlteaNAS'))):    
             new_files,year_list = monitor.check_for_new_files()
-            new_files = monitor.clean_files(new_files,year_list)
-            monitor.temporary_db_list(new_files)
+            new_files = monitor.clean_files(new_files,year_list)            
+            if not monitor.check_doy_sequence(new_files):
+                logging.error("DOY sequence is not consecutive. Temporary DB update aborted.")
+                raise utils.DOYSequenceError("DOY sequence is not consecutive. Aborting pipeline.")
+            else:
+                monitor.temporary_db_list(new_files)
+
             if len(temp_list) > 1:
                 temporary_db = TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
                 #temporary_db.clean_directories()

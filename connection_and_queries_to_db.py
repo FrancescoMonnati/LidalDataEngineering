@@ -355,6 +355,7 @@ def chaos_orbit_data_injection(server, database, username, password, table_name,
 
 def main():
     current_date = datetime.now().strftime('%Y-%m-%d')
+    print(current_date)
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
@@ -383,18 +384,18 @@ def main():
             path + "/ManagementFiles/Management_Files.json",
             "Y:/Lidal TorV temp"
         )
-        temp_db = temporary_db.TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
-        temp_db.db_backup("X:/")
+        #temp_db = temporary_db.TemporaryDB("Y:/Lidal TorV temp", path + "/ManagementFiles/Management_Files.json","H:/Inserimento")
+        #temp_db.db_backup("X:/")
         filtered_logs = monitor.extract_logs(current_date) 
-        if filtered_logs != []:             
-            email_body = "Report: \n"
-            for log in filtered_logs:
+        #if filtered_logs != []:             
+        email_body = "Report: \n"
+        for log in filtered_logs:
                 email_body += log.strip() + "\n"
-            mail_bool = sending_email.send_ticket_report(email_body)        
-            if mail_bool:
-                logger.info(f"Mail sent successfully")
-            else:
-                logger.error(f"Error in sending mail")
+        mail_bool = sending_email.send_ticket_report(email_body)        
+        if mail_bool:
+            logger.info(f"Mail sent successfully")
+        else:
+            logger.error(f"Error in sending mail")
     except Exception as e:
         logger.error(f"Error in quering database: {e}")       
 

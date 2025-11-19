@@ -23,4 +23,4 @@ def send_ticket_report(corpus):
                 server.sendmail(os.environ.get("sender_email_address"), recipient, message.as_string())
         return True
     except Exception as e:
-        return False
+        return e

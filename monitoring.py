@@ -163,8 +163,27 @@ class Monitoring_Lidal_Files:
                     self.logger.error(f"Error occurred while cleaning files: {e}")
                     return []
         else:
-            return []          
+            return []
+                 
+    def check_doy_sequence(self, file_list):
+        if not file_list:
+            return True
+        try:
+            doys = [int(f.split("-DOY")[1].split(".")[0]) for f in file_list]
+        except Exception:
+            self.logger.error("Failed extracting DOY numbers from some files.")
+            return False
 
+        doys_sorted = sorted(doys)
+        gaps = [(doys_sorted[i], doys_sorted[i+1]) for i in range(len(doys_sorted)-1)
+        if doys_sorted[i+1] != doys_sorted[i] + 1]
+        if gaps:
+            msg = f"DOY gaps detected: {gaps}"
+            self.logger.error(msg)
+            return False
+
+        return True
+    
     def temporary_db_list(self,new_files, remove = False):
 
         try:
@@ -194,13 +213,14 @@ class Monitoring_Lidal_Files:
 def main():
 
     current_date = datetime.now().strftime('%Y-%m-%d')
+    print(current_date)
     path = "D:/Utenti/difin/LidalDataEngineering"
     try:
 
         js = utils.read_json_file(path + "/Code/Environmental_Variables.json")["nas_server"]
         NAS_server = [name for name in js.values()]
         connections = []
-        env_vars = utils.get_environmental_variable(path + "/Code/Environmental_Variables.json")
+        utils.get_environmental_variable("D:/Utenti/difin/LidalDataEngineering/Code/Environmental_Variables.json")
         for name in NAS_server:
              connection = utils.is_nas_online(name)
              connections.append(connection)
@@ -208,9 +228,11 @@ def main():
         if (all(connections) or (connections.count(False) == 1 and not utils.is_nas_online('AlteaNAS'))):    
             new_files,year_list = monitor.check_for_new_files()
             new_files = monitor.clean_files(new_files,year_list)
-            monitor.temporary_db_list(new_files)
-        
-        
+            if not monitor.check_doy_sequence(new_files):
+                logging.error("DOY sequence is not consecutive. Temporary DB update aborted.")
+            else:
+                monitor.temporary_db_list(new_files)
+       
         filtered_logs = monitor.extract_logs(current_date)
         if filtered_logs != []:             
             email_body = "Report: \n"

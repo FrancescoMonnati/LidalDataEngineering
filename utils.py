@@ -86,10 +86,8 @@ def get_environmental_variable(file_path):
             os.environ["Orbit_table_name"] = js["Orbit_table_name"]
             os.environ["Argotech_source_path"] = js["Argotech_source_path"]
             os.environ["Argotech_destination_path"]  = js["Argotech_destination_path"]
-            return 
         except Exception as e:
             logger.error(f"Error in get environmental variable method {file_path}: {e}")
-
 
 def extract_doy(filename):
         try:
@@ -130,3 +128,5 @@ def is_nas_online(NAS_name, port=445, timeout=2):
         logger.error(f"Hostname: {NAS_name} is not online: {socket.error}")
         return False
 
+class DOYSequenceError(Exception):
+    pass
